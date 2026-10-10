@@ -87,7 +87,7 @@ jobs:
 
       - name: Upload model bundle
         if: steps.promote.outputs.promoted == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: approved-model-bundle
           path: dist/model-bundle.tar.gz
@@ -95,7 +95,7 @@ jobs:
 
       - name: Upload reports and promotion log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: retraining-reports
           path: |
