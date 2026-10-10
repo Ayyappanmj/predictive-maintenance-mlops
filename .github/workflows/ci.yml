@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint and format check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install "ruff>=0.4"
+      - name: Ruff lint
+        run: ruff check .
+      - name: Ruff format check
+        run: ruff format --check .
+
+  test:
+    name: Tests (schema, training, inference, API, drift)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Run pytest
+        # Covers: schema validation, leakage guard, small-data training, model loading and
+        # inference, API endpoints, drift detection (normal and shifted), simulation.
+        run: pytest -v --cov=src --cov=app --cov-report=term-missing
+
+  dataset-schema:
+    name: Validate real dataset schema (non-blocking)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # The UCI server is outside our control; an outage must not block merges.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pandas numpy pyyaml requests
+      - name: Download and validate AI4I 2020 (3 attempts)
+        run: |
+          for attempt in 1 2 3; do
+            python scripts/download_data.py && exit 0
+            echo "Attempt $attempt failed"; sleep 15
+          done
+          exit 1

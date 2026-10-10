@@ -1,0 +1,61 @@
+# Central configuration. Values here are settings, not results.
+seed: 42
+
+data:
+  uci_zip_url: "https://archive.ics.uci.edu/static/public/601/ai4i+2020+predictive+maintenance+dataset.zip"
+  raw_path: "data/ai4i2020.csv"
+  target: "Machine failure"
+  # Identifiers and columns that leak the target (failure-mode flags define it).
+  drop_columns: ["UDI", "Product ID", "TWF", "HDF", "PWF", "OSF", "RNF"]
+  numeric_features:
+    - "Air temperature [K]"
+    - "Process temperature [K]"
+    - "Rotational speed [rpm]"
+    - "Torque [Nm]"
+    - "Tool wear [min]"
+  categorical_features: ["Type"]
+
+split:
+  test_size: 0.20
+  val_size: 0.20   # fraction of the remaining training data
+
+risk:
+  medium: 0.30
+  high: 0.60
+
+promotion:
+  min_val_pr_auc: 0.50
+  min_val_recall: 0.60
+  min_improvement: 0.0
+
+validation:
+  min_rows: 100
+  allowed_types: ["L", "M", "H"]
+  # Broad physical plausibility bounds (not dataset statistics).
+  ranges:
+    "Air temperature [K]": [250, 350]
+    "Process temperature [K]": [250, 400]
+    "Rotational speed [rpm]": [0, 10000]
+    "Torque [Nm]": [0, 200]
+    "Tool wear [min]": [0, 1000]
+
+training:
+  threshold_strategy: "max_f1"     # chosen on validation data only
+  min_recall_for_threshold: 0.0    # optional recall floor when picking threshold
+  selection_metric: "pr_auc"       # validation metric used to pick the final model
+  model_dir: "models"
+  report_dir: "reports"
+  logistic_regression:
+    max_iter: 1000
+    C: 1.0
+  random_forest:
+    n_estimators: 300
+    min_samples_leaf: 2
+    max_depth: null
+
+drift:
+  alpha: 0.05          # per-feature p-value threshold (KS test numeric, chi-square categorical)
+  alert_share: 0.30    # alert when this share of features drifted
+  min_batch_size: 30   # smaller batches give unreliable tests and are rejected
+  psi_bins: 10
+  psi_flag: 0.20       # informational: PSI at or above this is flagged per feature

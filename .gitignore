@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Secrets / env
+.env
+*.pem
+
+# Data and generated artifacts (keep the READMEs)
+data/*
+!data/README.md
+reports/*
+!reports/README.md
+models/*
+!models/README.md
+mlruns/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Model registry and packaging
+model_registry/
+dist/
+.staging-*
+.backup-*

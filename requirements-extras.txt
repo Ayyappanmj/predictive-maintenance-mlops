@@ -1,0 +1,4 @@
+# Optional extras (not needed by the app, tests or CI).
+# Evidently adds an extra HTML drift report via src.drift_monitor.evidently_html_report().
+# Its API changes between versions; install and test it locally before relying on it.
+evidently>=0.4.30

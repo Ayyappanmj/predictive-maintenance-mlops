@@ -1,0 +1,36 @@
+# Render Blueprint: two free web services (API and dashboard) from one repository.
+# Fill the "sync: false" values in the Render dashboard when prompted.
+services:
+  - type: web
+    name: predictive-maintenance-api
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements-api.txt
+    startCommand: python scripts/render_start.py api
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: MODEL_REPO
+        sync: false # your GitHub OWNER/REPO (must be public)
+      - key: MODEL_DIR
+        value: models
+      - key: LOG_LEVEL
+        value: INFO
+
+  - type: web
+    name: predictive-maintenance-dashboard
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python scripts/render_start.py dashboard
+    healthCheckPath: /_stcore/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: MODEL_REPO
+        sync: false # your GitHub OWNER/REPO (must be public)
+      - key: MODEL_DIR
+        value: models
+      - key: API_URL
+        sync: false # public URL of the API service, e.g. https://<api-name>.onrender.com

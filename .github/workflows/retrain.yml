@@ -1,0 +1,138 @@
+name: Scheduled retraining
+
+on:
+  schedule:
+    - cron: "17 3 * * 1" # Mondays 03:17 UTC (default branch only; may be delayed)
+  workflow_dispatch:
+    inputs:
+      min_val_pr_auc:
+        description: "Override minimum validation PR-AUC (blank = use config)"
+        required: false
+        default: ""
+      min_val_recall:
+        description: "Override minimum validation recall (blank = use config)"
+        required: false
+        default: ""
+      publish:
+        description: "Publish the model as a GitHub Release if it is promoted"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: retrain
+  cancel-in-progress: false
+
+jobs:
+  retrain:
+    name: Train, evaluate and gate a candidate model
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      promoted: ${{ steps.promote.outputs.promoted }}
+      candidate_version: ${{ steps.promote.outputs.candidate_version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Fetch currently approved model (skipped if none published yet)
+        run: python scripts/fetch_model.py --repo "${{ github.repository }}" --allow-missing
+
+      - name: Download and validate training data (schema and quality)
+        run: |
+          for attempt in 1 2 3; do
+            python scripts/download_data.py && exit 0
+            echo "Attempt $attempt failed"; sleep 15
+          done
+          exit 1
+
+      - name: Drift check against the approved model's reference data
+        run: python scripts/run_drift_check.py
+
+      - name: Train candidate model
+        run: python -m src.train --model-dir model_registry/candidate --report-dir reports/candidate
+
+      - name: Run test suite
+        id: tests
+        continue-on-error: true
+        run: pytest -q
+
+      - name: Gate and promote candidate
+        id: promote
+        env:
+          MIN_PR_AUC: ${{ inputs.min_val_pr_auc }}
+          MIN_RECALL: ${{ inputs.min_val_recall }}
+        run: |
+          python -m src.promote_model promote \
+            --candidate-dir model_registry/candidate \
+            --tests-passed "${{ steps.tests.outcome == 'success' }}" \
+            --min-val-pr-auc "$MIN_PR_AUC" \
+            --min-val-recall "$MIN_RECALL"
+
+      - name: Package approved model
+        if: steps.promote.outputs.promoted == 'true'
+        run: python scripts/package_model.py
+
+      - name: Upload model bundle
+        if: steps.promote.outputs.promoted == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: approved-model-bundle
+          path: dist/model-bundle.tar.gz
+          retention-days: 30
+
+      - name: Upload reports and promotion log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: retraining-reports
+          path: |
+            reports/
+            model_registry/promotion_log.jsonl
+            model_registry/candidate/metadata.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+  publish:
+    name: Publish approved model as a GitHub Release
+    needs: retrain
+    if: >-
+      needs.retrain.outputs.promoted == 'true' &&
+      (inputs.publish == true || vars.PUBLISH_MODEL == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # only this job can write; it never pushes commits
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: approved-model-bundle
+          path: dist
+      - name: Create versioned release and refresh the model-latest pointer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          VERSION: ${{ needs.retrain.outputs.candidate_version }}
+        run: |
+          gh release create "model-$VERSION" dist/model-bundle.tar.gz --repo "$REPO" \
+            --title "Model $VERSION" --latest=false \
+            --notes "Approved model $VERSION (passed all promotion gates in workflow run $GITHUB_RUN_ID)."
+          if gh release view model-latest --repo "$REPO" >/dev/null 2>&1; then
+            gh release upload model-latest dist/model-bundle.tar.gz --repo "$REPO" --clobber
+          else
+            gh release create model-latest dist/model-bundle.tar.gz --repo "$REPO" \
+              --title "Latest approved model" --latest=false \
+              --notes "Rolling pointer to the most recently approved model."
+          fi
