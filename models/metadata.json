@@ -1,0 +1,136 @@
+{
+  "model_version": "20261010-154006",
+  "trained_at_utc": "2026-10-10T15:40:06.560382+00:00",
+  "model_name": "random_forest",
+  "selection": {
+    "metric": "val_pr_auc",
+    "chosen_on": "validation"
+  },
+  "decision_threshold": 0.3467347702234645,
+  "risk_thresholds": {
+    "medium": 0.3,
+    "high": 0.6
+  },
+  "seed": 42,
+  "input_schema": {
+    "columns": [
+      "Air temperature [K]",
+      "Process temperature [K]",
+      "Rotational speed [rpm]",
+      "Torque [Nm]",
+      "Tool wear [min]",
+      "Type"
+    ],
+    "numeric": [
+      "Air temperature [K]",
+      "Process temperature [K]",
+      "Rotational speed [rpm]",
+      "Torque [Nm]",
+      "Tool wear [min]"
+    ],
+    "categorical": [
+      "Type"
+    ],
+    "engineered": [
+      "Temperature difference [K]",
+      "Mechanical power [W]"
+    ]
+  },
+  "split_sizes": {
+    "train": 6400,
+    "validation": 1600,
+    "test": 2000
+  },
+  "positives": {
+    "train": 217,
+    "validation": 54,
+    "test": 68
+  },
+  "validation_metrics": {
+    "logistic_regression": {
+      "threshold": 0.9001481319676785,
+      "precision": 0.4918032786885246,
+      "recall": 0.5555555555555556,
+      "f1": 0.5217391304347826,
+      "pr_auc": 0.498398682029656,
+      "roc_auc": 0.9226797949307651,
+      "confusion_matrix": {
+        "tn": 1515,
+        "fp": 31,
+        "fn": 24,
+        "tp": 30
+      },
+      "n_samples": 1600,
+      "n_positive": 54
+    },
+    "random_forest": {
+      "threshold": 0.3467347702234645,
+      "precision": 0.8775510204081632,
+      "recall": 0.7962962962962963,
+      "f1": 0.8349514563106796,
+      "pr_auc": 0.8351021803086591,
+      "roc_auc": 0.9711441713382205,
+      "confusion_matrix": {
+        "tn": 1540,
+        "fp": 6,
+        "fn": 11,
+        "tp": 43
+      },
+      "n_samples": 1600,
+      "n_positive": 54
+    }
+  },
+  "test_metrics": {
+    "threshold": 0.3467347702234645,
+    "precision": 0.8461538461538461,
+    "recall": 0.8088235294117647,
+    "f1": 0.8270676691729323,
+    "pr_auc": 0.8504185166069256,
+    "roc_auc": 0.9694616977225674,
+    "confusion_matrix": {
+      "tn": 1922,
+      "fp": 10,
+      "fn": 13,
+      "tp": 55
+    },
+    "n_samples": 2000,
+    "n_positive": 68
+  },
+  "permutation_importance": {
+    "Torque [Nm]": {
+      "mean": 0.6539806419553182,
+      "std": 0.029305980660145604
+    },
+    "Rotational speed [rpm]": {
+      "mean": 0.4636756122266724,
+      "std": 0.029563600632673565
+    },
+    "Air temperature [K]": {
+      "mean": 0.44651675092110554,
+      "std": 0.03315386408891252
+    },
+    "Process temperature [K]": {
+      "mean": 0.3634972243521074,
+      "std": 0.026559004843588353
+    },
+    "Tool wear [min]": {
+      "mean": 0.22572443674170203,
+      "std": 0.01108412757815715
+    },
+    "Type": {
+      "mean": 0.026949613540490525,
+      "std": 0.008395069357155064
+    }
+  },
+  "reference_file": "reference.csv",
+  "data_sha256": "bcf8dbc0acae2397cf04f9940df83daac16da9417c66a04df9de61ce8e6425eb",
+  "model_sha256": "f2242ec4072aaacdae361daabcbc25b3cc36b2c0ad44b5abf3dcd50ffbaed043",
+  "versions": {
+    "python": "3.11.9",
+    "sklearn": "1.9.1",
+    "pandas": "2.3.3",
+    "numpy": "1.26.4"
+  },
+  "dataset_note": "AI4I 2020 is synthetic data (UCI, CC BY 4.0).",
+  "disclaimer": "Outputs are model estimates, not confirmed equipment failures."
+}
